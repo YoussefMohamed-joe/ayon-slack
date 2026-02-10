@@ -242,9 +242,9 @@ async def process_mention_event(
             r"\[([^\]]+)\]\(user:[^\)]+\)", r"@\1", clean_body
         )
 
-        # Simple message format - just mention and comment
+        # Message format - styled like the original but without Location
         message_text = (
-            f"{mentioner_display} mentioned you in {project_name}"
+            f":bell: {mentioner_display} mentioned you in *{project_name}*"
         )
 
         blocks = [
@@ -252,14 +252,26 @@ async def process_mention_event(
                 "type": "section",
                 "text": {
                     "type": "mrkdwn",
-                    "text": f"{mentioner_display} mentioned you in *{project_name}*",
+                    "text": f":bell: {mentioner_display} mentioned you in *{project_name}*",
                 },
+            },
+            {
+                "type": "divider",
+            },
+            {
+                "type": "section",
+                "fields": [
+                    {
+                        "type": "mrkdwn",
+                        "text": f"*Project:*\n{project_name}",
+                    },
+                ],
             },
             {
                 "type": "section",
                 "text": {
                     "type": "mrkdwn",
-                    "text": f"*Comment:*\n{clean_body[:500]}",
+                    "text": f"*Comment:*\n>{clean_body[:500]}",
                 },
             },
             {
@@ -269,9 +281,10 @@ async def process_mention_event(
                         "type": "button",
                         "text": {
                             "type": "plain_text",
-                            "text": "Open in Ayon",
+                            "text": ":round_pushpin: Open in Ayon",
                         },
                         "url": ayon_url,
+                        "style": "primary",
                     }
                 ],
             },

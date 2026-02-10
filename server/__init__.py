@@ -63,34 +63,17 @@ class Slack(BaseServerAddon):
         logger.warning("=" * 60)
 
         # Subscribe to activity events using EventStream
-        # Based on official Ayon documentation pattern
+        # IMPORTANT: Only subscribe to activity.created to avoid duplicate messages.
+        # Ayon fires multiple events per comment (activity.created, entity.activity.created,
+        # inbox.message). Subscribing to all of them causes 2-3x duplicate Slack DMs.
         try:
-            # Subscribe to activity.created event
-            # EventStream.subscribe() accepts async handlers directly
             EventStream.subscribe(
                 "activity.created",
                 self._on_activity_created,
-                all_nodes=False,  # Only process on this node
-            )
-
-            # Also subscribe to entity.activity.created
-            EventStream.subscribe(
-                "entity.activity.created",
-                self._on_activity_created,
                 all_nodes=False,
             )
 
-            # Subscribe to inbox.message events (where comment text actually appears)
-            EventStream.subscribe(
-                "inbox.message",
-                self._on_activity_created,
-                all_nodes=False,
-            )
-
-            logger.warning("✅ Event handlers registered via EventStream")
-            logger.warning("   - Subscribed to: activity.created")
-            logger.warning("   - Subscribed to: entity.activity.created")
-            logger.warning("   - Subscribed to: inbox.message (comment text)")
+            logger.warning("✅ Event handler registered: activity.created")
         except Exception as e:  # pragma: no cover - defensive logging
             error_msg = f"Could not register event handlers: {e}"
             logger.error(f"❌ {error_msg}", exc_info=True)
