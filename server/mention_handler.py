@@ -118,23 +118,12 @@ async def process_mention_event(
 
     logger.info("✅ Token found: length=%s", len(token))
 
+    # Build user mappings using helper function
+    from .settings_utils import build_user_mappings
+    
     user_mappings_list = plugin_settings.get("user_mappings", [])
-    logger.info(
-        "🔍 User mappings from settings: count=%s", len(user_mappings_list)
-    )
-
-    user_mappings_dict: Dict[str, str] = {}
-    for mapping in user_mappings_list:
-        if isinstance(mapping, dict):
-            ayon_user = mapping.get("ayon_user", "").strip()
-            slack_id = mapping.get("slack_user_id", "").strip()
-            if ayon_user and slack_id:
-                user_mappings_dict[ayon_user.lower()] = slack_id
-        elif isinstance(mapping, str) and ":" in mapping:
-            parts = mapping.split(":", 1)
-            if len(parts) == 2:
-                user_mappings_dict[parts[0].strip().lower()] = parts[1].strip()
-
+    user_mappings_dict = build_user_mappings(user_mappings_list)
+    
     logger.info("✅ User mappings: %s mappings", len(user_mappings_dict))
 
     author_name = event_data.get("author_name", "Someone")
@@ -253,6 +242,7 @@ async def process_mention_event(
             r"\[([^\]]+)\]\(user:[^\)]+\)", r"@\1", clean_body
         )
 
+        # Simple message format - just mention and comment
         message_text = (
             f"{mentioner_display} mentioned you in {project_name}"
         )
@@ -262,32 +252,14 @@ async def process_mention_event(
                 "type": "section",
                 "text": {
                     "type": "mrkdwn",
-                    "text": (
-                        f"🔔 {mentioner_display} mentioned you "
-                        f"in *{project_name}*"
-                    ),
+                    "text": f"{mentioner_display} mentioned you in *{project_name}*",
                 },
-            },
-            {
-                "type": "section",
-                "fields": [
-                    {
-                        "type": "mrkdwn",
-                        "text": f"*Project:*\n{project_name}",
-                    },
-                    {
-                        "type": "mrkdwn",
-                        "text": (
-                            f"*Location:*\n{entity_type.title()}: {entity_name}"
-                        ),
-                    },
-                ],
             },
             {
                 "type": "section",
                 "text": {
                     "type": "mrkdwn",
-                    "text": f"*Comment:*\n> {clean_body[:500]}",
+                    "text": f"*Comment:*\n{clean_body[:500]}",
                 },
             },
             {
@@ -297,10 +269,9 @@ async def process_mention_event(
                         "type": "button",
                         "text": {
                             "type": "plain_text",
-                            "text": "📍 Open in Ayon",
+                            "text": "Open in Ayon",
                         },
                         "url": ayon_url,
-                        "style": "primary",
                     }
                 ],
             },

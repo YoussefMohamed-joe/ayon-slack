@@ -109,14 +109,14 @@ DEFAULT_SLACK_SETTING = {
             ]
         }
     },
-        "mention_notifications": {
-            "MentionNotifications": {
-                "enabled": True,
-                "token": "",
-                "ayon_server_url": "",
-                "user_mappings": [],
-                "notify_self_mentions": False,
-                "test_slack_message": False
-            }
+    "mention_notifications": {
+        "MentionNotifications": {
+            "enabled": True,
+            "token": "",
+            "ayon_server_url": "",
+            "user_mappings": [],
+            "notify_self_mentions": False,
+            "test_slack_message": False
         }
+    }
 }
