@@ -218,6 +218,7 @@ class IntegrateSlackAPI(pyblish.api.InstancePlugin):
         """
 
         fill_data = copy.deepcopy(instance.data["anatomyData"])
+        fill_data["comment"] = instance.data["comment"]
         anatomy = instance.context.data["anatomy"]
         fill_data["root"] = anatomy.roots
         if review_path:
