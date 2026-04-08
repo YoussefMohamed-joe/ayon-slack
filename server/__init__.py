@@ -227,28 +227,7 @@ class Slack(BaseServerAddon):
         import logging
         logger = logging.getLogger(__name__)
 
-        logger.warning("=" * 60)
-        logger.warning("🎯 ACTIVITY.CREATED EVENT RECEIVED!")
-        logger.warning("=" * 60)
-        logger.warning(f"   Topic: {event.topic}")
-        logger.warning(f"   Project: {event.project}")
-        logger.warning(f"   User: {event.user}")
-
-        # Access summary (brief info)
-        summary = event.summary or {}
-        logger.warning(
-            "   Summary keys: "
-            f"{list(summary.keys()) if isinstance(summary, dict) else 'not a dict'}"
-        )
-
-        # Access payload (full details)
-        payload = event.payload or {}
-        logger.warning(
-            "   Payload keys: "
-            f"{list(payload.keys()) if isinstance(payload, dict) else 'not a dict'}"
-        )
-
-        logger.warning("🔍 Processing activity event...")
+        logger.debug(f"Processing activity event: topic={event.topic}, project={event.project}")
 
         try:
             from .events import handle_activity_event

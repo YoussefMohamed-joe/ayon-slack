@@ -284,7 +284,7 @@ async def handle_activity_event(
     from .mention_handler import process_mention_event
     
     try:
-        logger.warning(f"🔔 Activity event received: topic={event.topic}, project={event.project}, user={event.user}")
+        logger.debug(f"Activity event received: topic={event.topic}, project={event.project}, user={event.user}")
         
         # Note: EventStream.dispatch is async and would need to be awaited
         # Logger handles the logging instead
@@ -437,11 +437,9 @@ async def handle_activity_event(
         
         # If body is still empty, log what we have for debugging
         if not body:
-            logger.warning(f"⚠️ Body is empty. Payload keys: {list(payload.keys()) if isinstance(payload, dict) else 'not a dict'}")
-            logger.warning(f"   Payload content: {payload}")
-            logger.warning(f"   Summary content: {summary}")
+            logger.debug(f"Body is empty. Payload keys: {list(payload.keys()) if isinstance(payload, dict) else 'not a dict'}")
         
-        logger.warning(f"📝 Activity type: {activity_type}, body preview: {body[:50] if body else 'None'}...")
+        logger.debug(f"Activity type: {activity_type}, body preview: {body[:50] if body else 'None'}...")
         
         # Get entity info early to check if it's publish-related
         # Check summary.references first (Ayon structure), then payload
@@ -498,9 +496,7 @@ async def handle_activity_event(
         
         # Skip if no body text
         if not body:
-            logger.warning("⚠️ No body text in activity, skipping")
-            logger.warning(f"   Payload keys: {list(payload.keys()) if isinstance(payload, dict) else 'not a dict'}")
-            logger.warning(f"   Summary keys: {list(summary.keys()) if isinstance(summary, dict) else 'not a dict'}")
+            logger.debug("No body text in activity, skipping")
             # Try one more time - maybe the body is in a different format
             # Check if payload itself is a string (some Ayon versions might do this)
             if isinstance(payload, str):
