@@ -49,18 +49,8 @@ class Slack(BaseServerAddon):
         docker_container = os.environ.get("HOSTNAME", "unknown")  # Docker sets this
         ayon_env = os.environ.get("AYON_ENVIRONMENT", "unknown")
         ayon_addons_dir = os.environ.get("AYON_ADDONS_DIR", "unknown")
-
-        logger.warning("=" * 60)
-        logger.warning("🚀 SLACK ADDON INITIALIZING")
-        logger.warning("=" * 60)
-        logger.warning("📍 SERVER INFO:")
-        logger.warning(f"   - Hostname: {hostname}")
-        logger.warning(f"   - IP: {host_ip}")
-        logger.warning(f"   - Docker Container: {docker_container}")
-        logger.warning(f"   - AYON_SERVER_URL: {server_url}")
-        logger.warning(f"   - AYON_ENVIRONMENT: {ayon_env}")
-        logger.warning(f"   - AYON_ADDONS_DIR: {ayon_addons_dir}")
-        logger.warning("=" * 60)
+        
+        logger.info(f"Slack addon initializing on {hostname}")
 
         # Subscribe to activity events using EventStream
         # IMPORTANT: Only subscribe to activity.created to avoid duplicate messages.
@@ -72,21 +62,13 @@ class Slack(BaseServerAddon):
                 self._on_activity_created,
                 all_nodes=False,
             )
-
-            logger.warning("✅ Event handler registered: activity.created")
+            logger.info("Event handler registered: activity.created")
         except Exception as e:  # pragma: no cover - defensive logging
             error_msg = f"Could not register event handlers: {e}"
             logger.error(f"❌ {error_msg}", exc_info=True)
 
         # Note: Routers are registered via get_routers() method (official Ayon pattern)
         # Do NOT import routers here in initialize() - it causes import errors
-        logger.warning(
-            "ℹ️ Routers will be registered via get_routers() method "
-            "when Ayon requests them"
-        )
-
-        logger.warning("=" * 60)
-
     def get_routers(self):
         """Return list of routers to register.
 
@@ -100,9 +82,6 @@ class Slack(BaseServerAddon):
         try:
             from .routers import mentions, debug
             routers = [mentions.router, debug.router]
-            logger.warning(f"✅ Returning {len(routers)} routers:")
-            logger.warning(f"   - Router 1: {mentions.router.prefix} (mentions)")
-            logger.warning(f"   - Router 2: {debug.router.prefix} (debug)")
 
             return routers
         except Exception as e:  # pragma: no cover - defensive logging
@@ -150,12 +129,6 @@ class Slack(BaseServerAddon):
                     self.summary = summary or {}
 
             event = EventWrapper(topic, project, user, payload, summary)
-
-        logger.warning(
-            f"🔔 Notification event received: topic={topic}, project={project}"
-        )
-
-        # Check if this is a mention notification - look in payload and summary
         payload = event.payload or {}
         summary = getattr(event, "summary", {}) or {}
 
@@ -194,9 +167,6 @@ class Slack(BaseServerAddon):
         )
 
         if is_mention_notification:
-            logger.warning(
-                f"✅ Found mention notification for user: {mentioned_user}"
-            )
             try:
                 from .events import handle_notification_event
                 await handle_notification_event(self, event, mentioned_user)
@@ -204,13 +174,6 @@ class Slack(BaseServerAddon):
                 logger.error(
                     f"Error processing notification event: {e}", exc_info=True
                 )
-                # Fallback: try activity handler
-                try:
-                    logger.warning("🔄 Falling back to activity handler")
-                    from .events import handle_activity_event
-                    await handle_activity_event(self, event)
-                except Exception as e2:  # pragma: no cover
-                    logger.error(f"Fallback also failed: {e2}", exc_info=True)
 
     async def _on_activity_created(
         self, event: EventModel, *args, **kwargs

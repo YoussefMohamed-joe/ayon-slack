@@ -284,7 +284,6 @@ async def handle_activity_event(
     from .mention_handler import process_mention_event
     
     try:
-        logger.debug(f"Activity event received: topic={event.topic}, project={event.project}, user={event.user}")
         
         # Note: EventStream.dispatch is async and would need to be awaited
         # Logger handles the logging instead
@@ -374,12 +373,7 @@ async def handle_activity_event(
             asyncio.create_task(_process_in_background())
             return
         
-        # Log full event structure for debugging (first time only, or when issues occur)
-        logger.debug(f"📋 Event structure: topic={event.topic}, project={event.project}, user={event.user}")
-        logger.debug(f"📋 Payload keys: {list(payload.keys()) if isinstance(payload, dict) else 'not a dict'}")
-        logger.debug(f"📋 Summary keys: {list(summary.keys()) if isinstance(summary, dict) else 'not a dict'}")
-        if summary:
-            logger.debug(f"📋 Summary content: {summary}")
+
         
         # Activity events have this structure
         project_name = event.project or payload.get("project_name", "")
@@ -435,11 +429,9 @@ async def handle_activity_event(
                         body = str(body_value).strip()
                         break
         
-        # If body is still empty, log what we have for debugging
+        # If body is still empty, skip
         if not body:
-            logger.debug(f"Body is empty. Payload keys: {list(payload.keys()) if isinstance(payload, dict) else 'not a dict'}")
-        
-        logger.debug(f"Activity type: {activity_type}, body preview: {body[:50] if body else 'None'}...")
+            pass
         
         # Get entity info early to check if it's publish-related
         # Check summary.references first (Ayon structure), then payload
