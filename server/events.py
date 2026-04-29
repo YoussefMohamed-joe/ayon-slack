@@ -28,20 +28,20 @@ def _get_event_semaphore():
 def _log_mention_result(result: Dict[str, Any]) -> None:
     """Log mention notification result - simplified logging."""
     status = result.get("status", "unknown")
-    
+
     if status == "success":
         sent_count = len(result.get('notifications_sent', []))
-        logger.warning(f"✅ SUCCESS! Sent {sent_count} Slack notification(s)")
+        logger.info(f"Sent {sent_count} Slack notification(s).")
     elif status == "disabled":
-        logger.warning("⚠️ Mention notifications are DISABLED in settings")
+        logger.info("Mention notifications are disabled in project settings.")
     elif status == "no_mappings":
-        logger.error("❌ No user mappings configured!")
+        logger.error("No user mappings configured in settings.")
     elif result.get("errors"):
         errors = result.get('errors', [])
         error_msg = ', '.join(errors[:2])
-        logger.error(f"❌ ERROR: {error_msg}")
+        logger.error(f"Error processing mention: {error_msg}")
     else:
-        logger.warning(f"⚠️ Status: {status}")
+        logger.info(f"Mention processing status: {status}")
 
 
 async def get_entity_info(
@@ -104,111 +104,6 @@ async def get_user_name(user_id: str) -> str:
     
     # Fallback: just return the user_id as name
     return user_id
-
-
-async def handle_notification_event(
-    addon: "SlackAddon",
-    event: EventModel,
-    mentioned_user: str = None
-) -> None:
-    """
-    Handle notification events from Ayon's feed/notification system.
-    """
-    try:
-        logger.info(f"📬 Notification event received: topic={event.topic}")
-
-        # Get event data
-        payload = event.payload or {}
-        summary = getattr(event, 'summary', {}) or {}
-        project_name = event.project or payload.get("project_name", "")
-
-        if not project_name:
-            logger.warning("⚠️ No project name in notification event")
-            return
-
-        # Check for mention in body
-        body = payload.get("body", "")
-        if not body or ("@" not in body and "(user:" not in body):
-            return
-
-        logger.info(f"🚀 Queuing notification mention (non-blocking) for project: {project_name}")
-        
-        # Fire-and-forget: ALL processing in background
-        import asyncio
-        import os
-        
-        raw_event_data = {
-            "project_name": project_name,
-            "author_user_id": event.user or payload.get("author", ""),
-            "body": body,
-            "entity_type": payload.get("entity_type", "task"),
-            "entity_id": payload.get("entity_id", ""),
-            "activity_id": payload.get("activity_id"),
-            "mentioned_user": mentioned_user,
-        }
-        
-        async def _process_in_background():
-            # Use semaphore to limit concurrent tasks (prevents overload)
-            sem = _get_event_semaphore()
-            async with sem:
-                try:
-                    from .mention_handler import process_mention_event
-                    from .settings_utils import get_enabled_settings, get_mention_plugin_settings
-                    
-                    # Get settings
-                    settings = await get_enabled_settings(addon, raw_event_data["project_name"])
-                    if not settings:
-                        logger.warning("⚠️ No enabled settings found")
-                        return
-                    
-                    # Convert settings
-                    plugin_settings = get_mention_plugin_settings(settings)
-                    if not plugin_settings:
-                        logger.warning("⚠️ Could not extract plugin settings")
-                        return
-                    
-                    settings_dict = {
-                        "mention_notifications": {
-                            "MentionNotifications": plugin_settings
-                        }
-                    }
-                    
-                    # Get Ayon server URL
-                    ayon_server_url = plugin_settings.get("ayon_server_url", "") or os.environ.get("AYON_SERVER_URL", "http://localhost:5000")
-                    
-                    # Get user name
-                    author_name = await get_user_name(raw_event_data["author_user_id"])
-                    
-                    # Build event data
-                    event_data = {
-                        "author_name": author_name,
-                        "body": raw_event_data["body"],
-                        "entity_type": raw_event_data["entity_type"],
-                        "entity_id": raw_event_data["entity_id"],
-                        "entity_name": "Unknown",  # Will be extracted from notification
-                        "project_name": raw_event_data["project_name"],
-                        "activity_id": raw_event_data["activity_id"],
-                        "mentioned_user": raw_event_data.get("mentioned_user"),
-                    }
-                    
-                    # Process mention
-                    result = await process_mention_event(
-                        event_data=event_data,
-                        settings=settings_dict,
-                        ayon_server_url=ayon_server_url
-                    )
-                    
-                    # Log result
-                    _log_mention_result(result)
-                        
-                except Exception as e:
-                    logger.error(f"Error in background notification processing: {e}", exc_info=True)
-        
-        # Create background task - returns IMMEDIATELY
-        asyncio.create_task(_process_in_background())
-
-    except Exception as e:
-        logger.error(f"Error handling notification event: {e}", exc_info=True)
 
 
 def _extract_inbox_body(event, payload, summary) -> str:
@@ -396,7 +291,7 @@ async def handle_activity_event(
             if body_value is not None:
                 body = str(body_value).strip()
                 if body:
-                    logger.info(f"✅ Extracted body from payload['body']: {body[:50]}...")
+                    logger.debug(f"Extracted body from payload['body']: {body[:50]}...")
         
         # Second priority: summary.body
         if not body and isinstance(summary, dict) and "body" in summary:
@@ -586,4 +481,3 @@ async def handle_activity_event(
         
     except Exception as e:
         logger.error(f"Error handling activity event: {e}", exc_info=True)
-

@@ -97,18 +97,18 @@ async def process_mention_event(
     mention_settings = settings.get("mention_notifications", {})
     plugin_settings = mention_settings.get("MentionNotifications", {})
 
-    logger.warning("🔍 Mention settings check:")
-    logger.warning("   - Settings type: %s", type(settings))
-    logger.warning("   - Mention settings: %s", mention_settings)
-    logger.warning("   - Plugin settings: %s", plugin_settings)
-    logger.warning(
+    logger.debug("Mention settings check:")
+    logger.debug("   - Settings type: %s", type(settings))
+    logger.debug("   - Mention settings: %s", mention_settings)
+    logger.debug("   - Plugin settings: %s", plugin_settings)
+    logger.debug(
         "   - Enabled value: %s", plugin_settings.get("enabled", "NOT FOUND")
     )
 
     # Get token from mention notifications settings (separate from publish token)
     token = plugin_settings.get("token", "")
     if not token:
-        logger.warning("⚠️ No Slack token in mention notification settings")
+        logger.warning("No Slack token in mention notification settings")
         results["status"] = "no_token"
         results["errors"].append(
             "Slack token not configured for mention notifications. "
@@ -116,7 +116,7 @@ async def process_mention_event(
         )
         return results
 
-    logger.info("✅ Token found: length=%s", len(token))
+    logger.info("Token found for mention notifications.")
 
     # Build user mappings using helper function
     from .settings_utils import build_user_mappings
@@ -124,7 +124,7 @@ async def process_mention_event(
     user_mappings_list = plugin_settings.get("user_mappings", [])
     user_mappings_dict = build_user_mappings(user_mappings_list)
     
-    logger.info("✅ User mappings: %s mappings", len(user_mappings_dict))
+    logger.info("Found %s user mappings.", len(user_mappings_dict))
 
     author_name = event_data.get("author_name", "Someone")
     body = event_data.get("body", "")
@@ -134,13 +134,13 @@ async def process_mention_event(
     project_name = event_data.get("project_name", "")
     activity_id = event_data.get("activity_id")
 
-    logger.warning("🔍 Extracting mentions from body: %s", body[:100])
+    logger.info("Extracting mentions from body: %s", body[:100])
     mentions = extract_mentions(body)
     results["mentions_found"] = mentions
-    logger.warning("🔍 Found %d mention(s): %s", len(mentions), mentions)
+    logger.info("Found %d mention(s): %s", len(mentions), mentions)
 
     if not mentions:
-        logger.warning("⚠️ No mentions found in body, returning")
+        logger.info("No mentions found in body, returning")
         results["status"] = "no_mentions"
         return results
 
@@ -155,16 +155,16 @@ async def process_mention_event(
     notify_self_mentions = plugin_settings.get("notify_self_mentions", False)
 
     slack_ops = SlackOperations(token)
-    logger.info("✅ SlackOperations initialized")
+    logger.info("SlackOperations initialized for mentions.")
 
     users, groups = slack_ops.get_users_and_groups()
     if users:
         logger.info(
-            "✅ Retrieved %d users and %d groups from Slack", len(users), len(groups)
+            "Retrieved %d users and %d groups from Slack.", len(users), len(groups)
         )
 
     for mentioned_display_name in mentions:
-        logger.warning("🔍 Processing mention: '%s'", mentioned_display_name)
+        logger.info("Processing mention: '%s'", mentioned_display_name)
 
         mentioned_username = mentioned_display_name
 
@@ -182,7 +182,7 @@ async def process_mention_event(
             username_lower = mentioned_username.lower()
             if username_lower in user_mappings_dict:
                 slack_user_id = user_mappings_dict[username_lower]
-                logger.info(
+                logger.debug(
                     "✅ Found in mappings: %s → %s",
                     mentioned_username,
                     slack_user_id,
@@ -207,7 +207,7 @@ async def process_mention_event(
 
         if not slack_user_id:
             logger.warning(
-                "⚠️ No Slack user ID found for '%s', skipping",
+                "No Slack user ID found for '%s', skipping",
                 mentioned_username,
             )
             results["errors"].append(
@@ -215,7 +215,7 @@ async def process_mention_event(
             )
             continue
 
-        logger.info(
+        logger.debug(
             "✅ Found Slack ID: %s for user '%s'",
             slack_user_id,
             mentioned_username,
@@ -291,7 +291,7 @@ async def process_mention_event(
         ]
 
         logger.info(
-            "📨 Sending Slack message to %s (user: %s)...",
+            "Sending Slack message to %s (user: %s)...",
             slack_user_id,
             mentioned_username,
         )
@@ -331,4 +331,3 @@ async def process_mention_event(
         results["status"] = "partial_failure"
 
     return results
-
