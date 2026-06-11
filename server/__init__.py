@@ -57,12 +57,26 @@ class Slack(BaseServerAddon):
         # Ayon fires multiple events per comment (activity.created, entity.activity.created,
         # inbox.message). Subscribing to all of them causes 2-3x duplicate Slack DMs.
         try:
-            EventStream.subscribe(
-                "activity.created",
-                self._on_activity_created,
-                all_nodes=False,
-            )
-            logger.info("Event handler registered: activity.created")
+            import sys
+            
+            # Use sys to store a global reference that survives addon reloads.
+            # This prevents multiple subscriptions when uploading new addon versions.
+            if not hasattr(sys, "_ayon_slack_addon_instance"):
+                async def _activity_created_wrapper(event, *args, **kwargs):
+                    instance = getattr(sys, "_ayon_slack_addon_instance", None)
+                    if instance is not None:
+                        return await instance._on_activity_created(event, *args, **kwargs)
+                
+                EventStream.subscribe(
+                    "activity.created",
+                    _activity_created_wrapper,
+                    all_nodes=False,
+                )
+                logger.info("Event handler registered: activity.created")
+            else:
+                logger.info("Event handler already registered, updating instance reference.")
+                
+            sys._ayon_slack_addon_instance = self
         except Exception as e:  # pragma: no cover - defensive logging
             error_msg = f"Could not register event handlers: {e}"
             logger.error(f"❌ {error_msg}", exc_info=True)
